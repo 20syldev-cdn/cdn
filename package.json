@@ -1,0 +1,33 @@
+{
+    "version": "1.0.0",
+    "name": "@20syldev/cdn",
+    "description": "Node.js CDN API",
+    "main": "app.js",
+    "type": "module",
+    "scripts": {
+        "start": "node app.js",
+        "build": "npm install && node app.js",
+        "upgrade:minor": "npm upgrade",
+        "upgrade:major": "npx npm-check-updates -u && npm install",
+        "upgrade:build": "npm upgrade && npm install && node app.js"
+    },
+    "dependencies": {
+        "cors": "latest",
+        "express": "latest"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/20syldev/cdn.git"
+    },
+    "keywords": [
+        "cdn",
+        "express",
+        "utility"
+    ],
+    "author": "Sylvain L.",
+    "license": "BSD 3-Clause",
+    "bugs": {
+        "url": "https://github.com/20syldev/cdn/issues"
+    },
+    "homepage": "https://cdn.sylvain.pro"
+}
