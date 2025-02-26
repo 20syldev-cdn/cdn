@@ -12,7 +12,9 @@ const app = express();
 // API structure, packages types and projects
 const packages = {
     npm: {
+        list: '/npm',
         api: {
+            list: '/npm/api',
             versions: {
                 '1.0.0': '/npm/api@1.0.0',
                 '2.0.0': '/npm/api@2.0.0',
@@ -20,6 +22,7 @@ const packages = {
             }
         },
         minify: {
+            list: '/npm/minify',
             versions: {
                 '1.0.0': '/npm/minify@1.0.0'
             }
