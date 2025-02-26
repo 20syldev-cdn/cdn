@@ -120,7 +120,10 @@ app.use('/:type/:project/*', (req, res) => {
 
 // Main route
 app.get('/', (req, res) => {
-    res.redirect('https://sylvain.pro');
+    res.jsonResponse({
+        message: 'Use the following routes to access the projects and their versions.',
+        packages
+    });
 });
 
 // Display projects for a specific type
