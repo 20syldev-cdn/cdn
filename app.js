@@ -101,6 +101,26 @@ app.use('/:type/:project', (req, res, next) => {
             status: '404'
         });
     }
+
+    if (!version) {
+        const versions = Object.keys(packages[type][name].versions).reduce((acc, ver) => {
+            acc[ver] = `/${type}/${name}@${ver}`;
+            return acc;
+        }, {});
+
+        return res.jsonResponse({
+            message: `Available versions for the '${name}' project.`,
+            versions
+        });
+    }
+
+    if (!packages[type][name].versions[version]) {
+        return res.status(404).jsonResponse({
+            message: 'Not Found',
+            error: `Version ${version} does not exist in the '${name}' project.`,
+            status: '404'
+        });
+    }
     next();
 });
 
