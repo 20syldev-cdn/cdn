@@ -86,15 +86,15 @@ app.use('/:type', (req, res, next) => {
 // Check if project exists
 app.use('/:type/:project', (req, res, next) => {
     const { type, project } = req.params;
-    const [projectName, version] = project.split('@');
+    const [name, version] = project.split('@');
 
-    req.projectName = projectName;
+    req.name = name;
     req.version = version;
 
-    if (!packages[type] || !packages[type][projectName] || !packages[type][projectName].versions[version]) {
+    if (!packages[type] || !packages[type][name]) {
         return res.status(404).jsonResponse({
             message: 'Not Found',
-            error: `Version '${version}' does not exist for project '${projectName}' under '/${type}'.`,
+            error: `Project '${name}' does not exist in /${type}.`,
             status: '404'
         });
     }
@@ -104,12 +104,12 @@ app.use('/:type/:project', (req, res, next) => {
 // Serve files from specific project versions
 app.use('/:type/:project/*', (req, res) => {
     const { type } = req.params;
-    const filePath = join(__dirname, type, req.projectName, req.version, req.params[0]);
+    const filePath = join(__dirname, type, req.name, req.version, req.params[0]);
 
     if (!fs.existsSync(filePath)) {
         return res.status(404).jsonResponse({
             message: 'Not Found',
-            error: `File '${req.params[0]}' does not exist for version '${req.version}' of project '${req.projectName}' under '/${type}'.`,
+            error: `File '${req.params[0]}' does not exist in the ${req.version} version of the '${req.name}' project.`,
             status: '404'
         });
     }
@@ -128,7 +128,7 @@ app.get('/:type', (req, res) => {
     const { type } = req.params;
 
     res.jsonResponse({
-        message: `Projects under type '${type}'.`,
+        message: `${type.split('')[0].toUpperCase() + type.slice(1)} projects.`,
         projects: packages[type]
     });
 });
@@ -136,9 +136,9 @@ app.get('/:type', (req, res) => {
 // Project version details endpoint
 app.get('/:type/:project', (req, res) => {
     const { type } = req.params;
-    const projectName = req.projectName;
+    const name = req.name;
     const version = req.version;
-    const projectPath = join(__dirname, type, projectName, version);
+    const projectPath = join(__dirname, type, name, version);
 
     fs.readdir(projectPath, { withFileTypes: true }, (err, entries) => {
         if (err) {
@@ -158,9 +158,9 @@ app.get('/:type/:project', (req, res) => {
             };
         });
         res.jsonResponse({
-            name: projectName,
+            name: name,
             version,
-            current: projectName + '@' + version,
+            current: name + '@' + version,
             files
         });
     });
