@@ -1,11 +1,12 @@
 {
-    "version": "1.1.0",
+    "version": "1.2.0",
     "name": "@20syldev/cdn",
     "description": "Node.js CDN API",
     "main": "app.js",
     "type": "module",
     "scripts": {
         "start": "node app.js",
+        "dev": "nodemon app.js",
         "build": "npm install && node app.js",
         "upgrade:minor": "npm upgrade",
         "upgrade:major": "npx npm-check-updates -u && npm install",
