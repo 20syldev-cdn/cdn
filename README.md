@@ -2,14 +2,14 @@
   <a href="https://cdn.sylvain.pro"><img src="https://cdn.sylvain.pro/favicon.ico" alt="Logo" width="25%" height="auto"/></a>
 
   # CDN Personnel - Scripts et paquets
-  [![Version](https://custom-icon-badges.demolab.com/badge/Version%20:-v1.2.0-6479ee?logo=cdn.sylvain.pro&labelColor=23272A)](https://github.com/20syldev/cdn/releases/latest)
+  [![Version](https://custom-icon-badges.demolab.com/badge/Version%20:-v1.3.0-6479ee?logo=cdn.sylvain.pro&labelColor=23272A)](https://github.com/20syldev/cdn/releases/latest)
 </div>
 
 ---
 
 ## Qu'est-ce que c'est ?
 Mon réseau de stockage de fichiers (CDN) personnel est un outil essentiel pour stocker et partager mes scripts, paquets et autres ressources en ligne.
-Régulièrement mis à jour, ces fichiers sont accessibles à tous et peuvent être intégrés dans des projets personnels ou professionnels. 
+Régulièrement mis à jour, ces fichiers sont accessibles à tous et peuvent être intégrés dans des projets personnels ou professionnels.
 
 ## Pourquoi utiliser ce CDN ?
 - **Utilisation simple** : Intégration facile dans vos projets.
