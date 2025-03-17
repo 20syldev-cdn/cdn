@@ -31,14 +31,8 @@ const packages = {
             list: '/npm/wrkit',
             versions: {
                 '1.0.0': '/npm/wrkit@1.0.0',
-                '1.0.1': '/npm/wrkit@1.0.1',
-                '1.0.2': '/npm/wrkit@1.0.2',
                 '2.0.0': '/npm/wrkit@2.0.0',
-                '2.0.1': '/npm/wrkit@2.0.1',
-                '2.0.2': '/npm/wrkit@2.0.2',
-                '2.0.3': '/npm/wrkit@2.0.3',
-                '2.0.4': '/npm/wrkit@2.0.4',
-                '2.0.5': '/npm/wrkit@2.0.5'
+                '2.1.0': '/npm/wrkit@2.1.0'
             }
         }
     }
