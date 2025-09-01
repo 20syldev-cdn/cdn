@@ -9,37 +9,64 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const app = express();
 
-// API structure, packages types and projects
-const packages = {
-    npm: {
-        list: '/npm',
-        api: {
-            list: '/npm/api',
-            versions: {
-                '1.0.0': '/npm/api@1.0.0',
-                '2.0.0': '/npm/api@2.0.0',
-                '3.0.0': '/npm/api@3.0.0'
-            }
-        },
-        minify: {
-            list: '/npm/minify',
-            versions: {
-                '1.0.0': '/npm/minify@1.0.0'
-            }
-        },
-        wrkit: {
-            list: '/npm/wrkit',
-            versions: {
-                '1.0.0': '/npm/wrkit@1.0.0',
-                '2.0.0': '/npm/wrkit@2.0.0',
-                '2.1.0': '/npm/wrkit@2.1.0'
-            }
-        }
-    }
-};
+// Dynamic packages object
+let packages = getPackages();
 
 // Define global variables
 let requests = 0, resetTime = Date.now() + 10000;
+
+// ----------- ----------- FUNCTIONS ----------- ----------- //
+
+// Function to dynamically scan packages from filesystem
+function getPackages() {
+    const packages = {};
+
+    try {
+        const packageTypes = fs.readdirSync(__dirname, { withFileTypes: true })
+            .filter(dirent => dirent.isDirectory() && !dirent.name.startsWith('.'))
+            .map(dirent => dirent.name)
+            .filter(name => !['node_modules', 'src'].includes(name));
+
+        packageTypes.forEach(type => {
+            const typePath = join(__dirname, type);
+            packages[type] = { list: `/${type}` };
+
+            const projects = fs.readdirSync(typePath, { withFileTypes: true })
+                .filter(dirent => dirent.isDirectory())
+                .map(dirent => dirent.name);
+
+            projects.forEach(project => {
+                const projectPath = join(typePath, project);
+                packages[type][project] = {
+                    list: `/${type}/${project}`,
+                    versions: {}
+                };
+
+                const versions = fs.readdirSync(projectPath, { withFileTypes: true })
+                    .filter(dirent => dirent.isDirectory())
+                    .map(dirent => dirent.name)
+                    .sort((a, b) => {
+                        const aParts = a.split('.').map(Number);
+                        const bParts = b.split('.').map(Number);
+                        for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+                            const aPart = aParts[i] || 0;
+                            const bPart = bParts[i] || 0;
+                            if (aPart !== bPart) return aPart - bPart;
+                        }
+                        return 0;
+                    });
+
+                versions.forEach(version => {
+                    packages[type][project].versions[version] = `/${type}/${project}@${version}`;
+                });
+            });
+        });
+    } catch (error) {
+        console.error('Error scanning packages:', error);
+    }
+
+    return packages;
+}
 
 // ----------- ----------- MIDDLEWARES SETUP ----------- ----------- //
 
