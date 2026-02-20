@@ -2,7 +2,7 @@
   <a href="https://cdn.sylvain.pro"><img src="https://cdn.sylvain.pro/favicon.ico" alt="Logo" width="25%" height="auto"/></a>
 
   # CDN Personnel - Scripts et paquets
-  [![Version](https://custom-icon-badges.demolab.com/badge/Version%20:-v1.5.0-6479ee?logo=cdn.sylvain.pro&labelColor=23272A)](https://github.com/20syldev/cdn/releases/latest)
+  [![Version](https://custom-icon-badges.demolab.com/badge/Version%20:-v1.6.0-6479ee?logo=cdn.sylvain.pro&labelColor=23272A)](https://github.com/20syldev/cdn/releases/latest)
 </div>
 
 ---
