@@ -16,6 +16,10 @@
         "cors": "latest",
         "express": "latest"
     },
+    "devDependencies": {
+        "nodemon": "latest",
+        "npm-check-updates": "latest"
+    },
     "repository": {
         "type": "git",
         "url": "git+https://github.com/20syldev/cdn.git"
