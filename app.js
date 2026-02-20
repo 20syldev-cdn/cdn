@@ -160,14 +160,15 @@ app.use('/:type/:project', (req, res, next) => {
 });
 
 // Serve files from specific project versions
-app.use('/:type/:project/*', (req, res) => {
+app.use('/:type/:project/*file', (req, res) => {
     const { type } = req.params;
-    const filePath = join(__dirname, type, req.name, req.version, req.params[0]);
+    const file = [].concat(req.params.file).join('/');
+    const filePath = join(__dirname, type, req.name, req.version, file);
 
     if (!fs.existsSync(filePath)) {
         return res.status(404).jsonResponse({
             message: 'Not Found',
-            error: `File '${req.params[0]}' does not exist in the ${req.version} version of the '${req.name}' project.`,
+            error: `File '${file}' does not exist in the ${req.version} version of the '${req.name}' project.`,
             status: '404'
         });
     }
