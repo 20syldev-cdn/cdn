@@ -56,6 +56,7 @@ function getPackages() {
                         return 0;
                     });
 
+                packages[type][project].versions['latest'] = `/${type}/${project}@latest`;
                 versions.forEach(version => {
                     packages[type][project].versions[version] = `/${type}/${project}@${version}`;
                 });
@@ -149,7 +150,10 @@ app.use('/:type/:project', (req, res, next) => {
         });
     }
 
-    if (!packages[type][name].versions[version]) {
+    if (version === 'latest') {
+        const versionKeys = Object.keys(packages[type][name].versions);
+        req.version = versionKeys[versionKeys.length - 1];
+    } else if (!packages[type][name].versions[version]) {
         return res.status(404).jsonResponse({
             message: 'Not Found',
             error: `Version ${version} does not exist in the '${name}' project.`,
