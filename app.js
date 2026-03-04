@@ -98,16 +98,6 @@ app.use((req, res, next) => {
     next();
 });
 
-// Internal Server Error
-app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).jsonResponse({
-        message: 'Internal Server Error',
-        error: err.message,
-        status: '500'
-    });
-});
-
 // Check if package type exists
 app.use('/:type', (req, res, next) => {
     const { type } = req.params;
@@ -176,6 +166,26 @@ app.use('/:type/:project/*file', (req, res) => {
             status: '404'
         });
     }
+
+    if (fs.statSync(filePath).isDirectory()) {
+        const entries = fs.readdirSync(filePath, { withFileTypes: true });
+        const files = entries.map(ent => {
+            const fullPath = join(filePath, ent.name);
+            const stat = fs.statSync(fullPath);
+            return {
+                name: ent.isDirectory() ? ent.name + '/' : ent.name,
+                size: ent.isDirectory() ? null : stat.size,
+                directory: ent.isDirectory()
+            };
+        });
+        return res.jsonResponse({
+            name: req.name,
+            version: req.version,
+            path: file.replace(/\/$/, ''),
+            files
+        });
+    }
+
     res.sendFile(filePath);
 });
 
@@ -229,6 +239,16 @@ app.get('/:type/:project', (req, res) => {
             current: name + '@' + version,
             files
         });
+    });
+});
+
+// Internal Server Error
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).jsonResponse({
+        message: 'Internal Server Error',
+        error: err.message,
+        status: '500'
     });
 });
 
