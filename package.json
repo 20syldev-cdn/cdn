@@ -1,5 +1,5 @@
 {
-    "version": "1.7.0",
+    "version": "1.8.0",
     "name": "@20syldev/cdn",
     "description": "Node.js CDN API",
     "main": "app.js",
@@ -34,5 +34,5 @@
     "bugs": {
         "url": "https://github.com/20syldev/cdn/issues"
     },
-    "homepage": "https://cdn.sylvain.pro"
+    "homepage": "https://cdn.sylvain.sh"
 }
