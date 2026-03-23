@@ -423,6 +423,9 @@ app.use('/:type/:project/*file', (req, res) => {
 app.get('/', (req, res) => {
     res.jsonResponse({
         message: 'Use the following routes to access the projects and their versions.',
+        health: '/health',
+        search: '/search?q=',
+        download: '/download',
         packages
     });
 });
