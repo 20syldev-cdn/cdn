@@ -405,6 +405,15 @@ app.use('/:type/:project/*file', (req, res) => {
         });
     }
 
+    const stat = fs.statSync(filePath);
+    const etag = `"${stat.size.toString(16)}-${stat.mtimeMs.toString(16)}"`;
+    res.setHeader('ETag', etag);
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+
+    if (req.headers['if-none-match'] === etag) {
+        return res.status(304).end();
+    }
+
     res.sendFile(filePath);
 });
 
