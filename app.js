@@ -1,4 +1,5 @@
 import cors from 'cors';
+import crypto from 'crypto';
 import express from 'express';
 import fs from 'fs';
 import { dirname, join } from 'path';
@@ -101,6 +102,23 @@ function countPackages() {
         }
     }
     return count;
+}
+
+// Function to compute SHA256 checksums for all files in a directory
+function getFilesSHA256(dirPath, basePath = dirPath) {
+    const results = {};
+    const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+    for (const entry of entries) {
+        const fullPath = join(dirPath, entry.name);
+        const relativePath = fullPath.replace(basePath + '/', '');
+        if (entry.isDirectory()) {
+            Object.assign(results, getFilesSHA256(fullPath, basePath));
+        } else {
+            const content = fs.readFileSync(fullPath);
+            results[relativePath] = crypto.createHash('sha256').update(content).digest('hex');
+        }
+    }
+    return results;
 }
 
 // Function to send a .tar.gz archive of a package version
@@ -416,6 +434,22 @@ app.get('/:type/:project', (req, res) => {
     const name = req.name;
     const version = req.version;
     const projectPath = join(__dirname, type, name, version);
+
+    // SHA256 checksums for all files
+    if (req.query.checksums !== undefined) {
+        const checksums = getFilesSHA256(projectPath);
+        return res.jsonResponse({
+            name,
+            version,
+            algorithm: 'sha256',
+            checksums
+        });
+    }
+
+    // Download as .tar.gz archive
+    if (req.query.download !== undefined) {
+        return sendArchive(res, type, name, version);
+    }
 
     fs.readdir(projectPath, { withFileTypes: true }, (err, entries) => {
         if (err) {
