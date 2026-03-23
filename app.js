@@ -284,6 +284,35 @@ app.use('/:type', (req, res, next) => {
     next();
 });
 
+// Changelog endpoint for a project
+app.get('/:type/:project/changelog', (req, res) => {
+    const { type, project } = req.params;
+
+    if (!packages[type] || !packages[type][project]) {
+        return res.status(404).jsonResponse({
+            message: 'Not Found',
+            error: `Project '${project}' does not exist in /${type}.`,
+            status: '404'
+        });
+    }
+
+    const versions = Object.keys(packages[type][project].versions)
+        .filter(v => v !== 'latest');
+
+    const changelog = versions.map(version => {
+        const versionPath = join(__dirname, type, project, version);
+        const stat = fs.statSync(versionPath);
+        return {
+            version,
+            date: stat.mtime.toISOString().split('T')[0],
+            url: `/${type}/${project}@${version}`
+        };
+    });
+
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.jsonResponse({ name: project, type, versions: changelog.length, changelog });
+});
+
 // Check if project exists
 app.use('/:type/:project', (req, res, next) => {
     const { type, project } = req.params;
