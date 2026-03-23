@@ -71,6 +71,26 @@ function getPackages() {
     return packages;
 }
 
+// Function to search packages by name
+function searchPackages(query) {
+    const results = [];
+    const q = query.toLowerCase();
+    for (const type of Object.keys(packages)) {
+        for (const project of Object.keys(packages[type])) {
+            if (project === 'list') continue;
+            if (project.toLowerCase().includes(q)) {
+                results.push({
+                    type,
+                    name: project,
+                    versions: Object.keys(packages[type][project].versions),
+                    url: `/${type}/${project}`
+                });
+            }
+        }
+    }
+    return results;
+}
+
 // Function to count total packages
 function countPackages() {
     let count = 0;
@@ -125,6 +145,24 @@ app.get('/health', (req, res) => {
             heapUsed: `${(mem.heapUsed / 1024 / 1024).toFixed(2)} MB`,
             heapTotal: `${(mem.heapTotal / 1024 / 1024).toFixed(2)} MB`
         }
+    });
+});
+
+// Search packages by name
+app.get('/search', (req, res) => {
+    const query = req.query.q;
+    if (!query || query.trim().length === 0) {
+        return res.status(400).jsonResponse({
+            message: 'Bad Request',
+            error: 'Missing required query parameter: q',
+            status: '400'
+        });
+    }
+    const results = searchPackages(query.trim());
+    res.jsonResponse({
+        query: query.trim(),
+        count: results.length,
+        results
     });
 });
 
