@@ -25,7 +25,7 @@ function getPackages() {
         const packageTypes = fs.readdirSync(__dirname, { withFileTypes: true })
             .filter(dirent => dirent.isDirectory() && !dirent.name.startsWith('.'))
             .map(dirent => dirent.name)
-            .filter(name => !['node_modules', 'src'].includes(name));
+            .filter(name => !['node_modules', 'src', 'scripts'].includes(name));
 
         packageTypes.forEach(type => {
             const typePath = join(__dirname, type);
@@ -84,8 +84,8 @@ app.use('/robots.txt', express.static(join(__dirname, 'robots.txt')));
 
 // Return formatted JSON
 app.use((req, res, next) => {
-    res.setHeader('Content-Type', 'application/json');
     res.jsonResponse = (data) => {
+        res.setHeader('Content-Type', 'application/json');
         res.send(JSON.stringify(data, null, 2));
     };
     next();
