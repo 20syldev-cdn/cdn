@@ -8,6 +8,8 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const app = express();
+const pkg = JSON.parse(fs.readFileSync(join(__dirname, 'package.json'), 'utf-8'));
+const startTime = Date.now();
 
 // Dynamic packages object
 let packages = getPackages();
@@ -69,6 +71,17 @@ function getPackages() {
     return packages;
 }
 
+// Function to count total packages
+function countPackages() {
+    let count = 0;
+    for (const type of Object.keys(packages)) {
+        for (const key of Object.keys(packages[type])) {
+            if (key !== 'list') count++;
+        }
+    }
+    return count;
+}
+
 // ----------- ----------- MIDDLEWARES SETUP ----------- ----------- //
 
 // CORS & Express setup
@@ -96,6 +109,23 @@ app.use((req, res, next) => {
     if (Date.now() > resetTime) requests = 0, resetTime = Date.now() + 10000;
     if (++requests > 1000) return res.status(429).jsonResponse({ message: 'Too Many Requests' });
     next();
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+    const uptime = (Date.now() - startTime) / 1000;
+    const mem = process.memoryUsage();
+    res.jsonResponse({
+        status: 'ok',
+        version: pkg.version,
+        uptime: `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m ${Math.floor(uptime % 60)}s`,
+        packages: countPackages(),
+        memory: {
+            rss: `${(mem.rss / 1024 / 1024).toFixed(2)} MB`,
+            heapUsed: `${(mem.heapUsed / 1024 / 1024).toFixed(2)} MB`,
+            heapTotal: `${(mem.heapTotal / 1024 / 1024).toFixed(2)} MB`
+        }
+    });
 });
 
 // Check if package type exists
