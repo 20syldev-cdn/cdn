@@ -1,11 +1,12 @@
 import cors from 'cors';
-import crypto from 'crypto';
 import express from 'express';
 import fs from 'fs';
 import { dirname, join } from 'path';
-import { spawn } from 'child_process';
 import { urlencoded, json } from 'express';
 import { fileURLToPath } from 'url';
+import { getPackages, searchPackages, countPackages } from './lib/packages.js';
+import { getFilesSHA256 } from './lib/checksum.js';
+import { sendArchive } from './lib/archive.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -14,132 +15,10 @@ const pkg = JSON.parse(fs.readFileSync(join(__dirname, 'package.json'), 'utf-8')
 const startTime = Date.now();
 
 // Dynamic packages object
-let packages = getPackages();
+let packages = getPackages(__dirname);
 
 // Define global variables
 let requests = 0, resetTime = Date.now() + 10000;
-
-// ----------- ----------- FUNCTIONS ----------- ----------- //
-
-// Function to dynamically scan packages from filesystem
-function getPackages() {
-    const packages = {};
-
-    try {
-        const packageTypes = fs.readdirSync(__dirname, { withFileTypes: true })
-            .filter(dirent => dirent.isDirectory() && !dirent.name.startsWith('.'))
-            .map(dirent => dirent.name)
-            .filter(name => !['node_modules', 'src', 'scripts'].includes(name));
-
-        packageTypes.forEach(type => {
-            const typePath = join(__dirname, type);
-            packages[type] = { list: `/${type}` };
-
-            const projects = fs.readdirSync(typePath, { withFileTypes: true })
-                .filter(dirent => dirent.isDirectory())
-                .map(dirent => dirent.name);
-
-            projects.forEach(project => {
-                const projectPath = join(typePath, project);
-                packages[type][project] = {
-                    list: `/${type}/${project}`,
-                    versions: {}
-                };
-
-                const versions = fs.readdirSync(projectPath, { withFileTypes: true })
-                    .filter(dirent => dirent.isDirectory())
-                    .map(dirent => dirent.name)
-                    .sort((a, b) => {
-                        const aParts = a.split('.').map(Number);
-                        const bParts = b.split('.').map(Number);
-                        for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
-                            const aPart = aParts[i] || 0;
-                            const bPart = bParts[i] || 0;
-                            if (aPart !== bPart) return aPart - bPart;
-                        }
-                        return 0;
-                    });
-
-                packages[type][project].versions['latest'] = `/${type}/${project}@latest`;
-                versions.forEach(version => {
-                    packages[type][project].versions[version] = `/${type}/${project}@${version}`;
-                });
-            });
-        });
-    } catch (error) {
-        console.error('Error scanning packages:', error);
-    }
-
-    return packages;
-}
-
-// Function to search packages by name
-function searchPackages(query) {
-    const results = [];
-    const q = query.toLowerCase();
-    for (const type of Object.keys(packages)) {
-        for (const project of Object.keys(packages[type])) {
-            if (project === 'list') continue;
-            if (project.toLowerCase().includes(q)) {
-                results.push({
-                    type,
-                    name: project,
-                    versions: Object.keys(packages[type][project].versions),
-                    url: `/${type}/${project}`
-                });
-            }
-        }
-    }
-    return results;
-}
-
-// Function to count total packages
-function countPackages() {
-    let count = 0;
-    for (const type of Object.keys(packages)) {
-        for (const key of Object.keys(packages[type])) {
-            if (key !== 'list') count++;
-        }
-    }
-    return count;
-}
-
-// Function to compute SHA256 checksums for all files in a directory
-function getFilesSHA256(dirPath, basePath = dirPath) {
-    const results = {};
-    const entries = fs.readdirSync(dirPath, { withFileTypes: true });
-    for (const entry of entries) {
-        const fullPath = join(dirPath, entry.name);
-        const relativePath = fullPath.replace(basePath + '/', '');
-        if (entry.isDirectory()) {
-            Object.assign(results, getFilesSHA256(fullPath, basePath));
-        } else {
-            const content = fs.readFileSync(fullPath);
-            results[relativePath] = crypto.createHash('sha256').update(content).digest('hex');
-        }
-    }
-    return results;
-}
-
-// Function to send a .tar.gz archive of a package version
-function sendArchive(res, type, name, version) {
-    const archiveName = `${name}-${version}.tar.gz`;
-    res.setHeader('Content-Type', 'application/gzip');
-    res.setHeader('Content-Disposition', `attachment; filename="${archiveName}"`);
-
-    const tar = spawn('tar', ['-czf', '-', '-C', join(__dirname, type, name), version]);
-    const chunks = [];
-    tar.stdout.on('data', chunk => chunks.push(chunk));
-    tar.stdout.on('end', () => res.end(Buffer.concat(chunks)));
-    tar.stderr.on('data', (data) => console.error('tar error:', data.toString()));
-    tar.on('error', () => {
-        res.status(500).jsonResponse({
-            message: 'Internal Server Error',
-            error: 'Archive creation failed.',
-            status: '500'
-        });
-    });
-}
 
 // ----------- ----------- MIDDLEWARES SETUP ----------- ----------- //
 
@@ -178,7 +57,7 @@ app.get('/health', (req, res) => {
         status: 'ok',
         version: pkg.version,
         uptime: `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m ${Math.floor(uptime % 60)}s`,
-        packages: countPackages(),
+        packages: countPackages(packages),
         memory: {
             rss: `${(mem.rss / 1024 / 1024).toFixed(2)} MB`,
             heapUsed: `${(mem.heapUsed / 1024 / 1024).toFixed(2)} MB`,
@@ -197,7 +76,7 @@ app.get('/search', (req, res) => {
             status: '400'
         });
     }
-    const results = searchPackages(query.trim());
+    const results = searchPackages(packages, query.trim());
     res.jsonResponse({
         query: query.trim(),
         count: results.length,
@@ -285,7 +164,7 @@ app.get('/download/:type/:project', (req, res) => {
         });
     }
 
-    sendArchive(res, type, name, resolvedVersion);
+    sendArchive(res, type, name, resolvedVersion, __dirname);
 });
 
 // Check if package type exists
@@ -460,7 +339,7 @@ app.get('/:type/:project', (req, res) => {
 
     // Download as .tar.gz archive
     if (req.query.download !== undefined) {
-        return sendArchive(res, type, name, version);
+        return sendArchive(res, type, name, version, __dirname);
     }
 
     fs.readdir(projectPath, { withFileTypes: true }, (err, entries) => {
