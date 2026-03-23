@@ -8,11 +8,49 @@
 ---
 
 ## Qu'est-ce que c'est ?
-Mon réseau de stockage de fichiers (CDN) personnel est un outil essentiel pour stocker et partager mes scripts, paquets et autres ressources en ligne.
-Régulièrement mis à jour, ces fichiers sont accessibles à tous et peuvent être intégrés dans des projets personnels ou professionnels.
+CDN personnel pour stocker et partager scripts, paquets et autres ressources.
+Mis à jour régulièrement, les fichiers sont accessibles à tous.
 
-## Pourquoi utiliser ce CDN ?
-- **Utilisation simple** : Intégration facile dans vos projets.
-- **Hébergement rapide et fiable** : Chargement instantané des fichiers.
-- **Mises à jour automatiques** : Toujours accès aux dernières versions via des redirections.
-- **Accès libre** : Utilisable dans n'importe quel contexte, personnel ou professionnel.
+## Utilisation
+
+### Accéder à un paquet
+```
+https://cdn.sylvain.sh/<type>/<projet>@<version>
+https://cdn.sylvain.sh/bash/gft@latest
+https://cdn.sylvain.sh/bash/gft@1.0.0
+```
+
+### Télécharger un fichier
+```bash
+curl -O https://cdn.sylvain.sh/bash/gft@latest/gft
+```
+
+### Télécharger un paquet complet (.tar.gz)
+Via le navigateur ou `curl` :
+```
+https://cdn.sylvain.sh/download/bash/gft@1.0.0
+```
+```bash
+curl -O https://cdn.sylvain.sh/bash/gft@1.0.0?download
+```
+
+### Vérifier l'intégrité (SHA256)
+```bash
+curl https://cdn.sylvain.sh/bash/gft@1.0.0?checksums
+```
+
+### Rechercher un paquet
+```
+https://cdn.sylvain.sh/search?q=gft
+```
+
+### Autres endpoints
+| Route                                    | Description                      |
+| ---------------------------------------- | -------------------------------- |
+| `/health`                                | État du serveur, version, uptime |
+| `/<type>`                                | Liste des projets d'un type      |
+| `/<type>/<projet>/changelog`             | Historique des versions          |
+| `/<type>/<projet>@<version>?checksums`   | Checksums SHA256                 |
+| `/<type>/<projet>@<version>?download`    | Archive .tar.gz                  |
+| `/download/<type>/<projet>@<version>`    | Archive .tar.gz (navigateur)     |
+| `/search?q=<nom>`                        | Recherche par nom                |
