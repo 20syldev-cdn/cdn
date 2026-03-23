@@ -2,6 +2,7 @@ import cors from 'cors';
 import express from 'express';
 import fs from 'fs';
 import { dirname, join } from 'path';
+import { spawn } from 'child_process';
 import { urlencoded, json } from 'express';
 import { fileURLToPath } from 'url';
 
@@ -102,6 +103,26 @@ function countPackages() {
     return count;
 }
 
+// Function to send a .tar.gz archive of a package version
+function sendArchive(res, type, name, version) {
+    const archiveName = `${name}-${version}.tar.gz`;
+    res.setHeader('Content-Type', 'application/gzip');
+    res.setHeader('Content-Disposition', `attachment; filename="${archiveName}"`);
+
+    const tar = spawn('tar', ['-czf', '-', '-C', join(__dirname, type, name), version]);
+    const chunks = [];
+    tar.stdout.on('data', chunk => chunks.push(chunk));
+    tar.stdout.on('end', () => res.end(Buffer.concat(chunks)));
+    tar.stderr.on('data', (data) => console.error('tar error:', data.toString()));
+    tar.on('error', () => {
+        res.status(500).jsonResponse({
+            message: 'Internal Server Error',
+            error: 'Archive creation failed.',
+            status: '500'
+        });
+    });
+}
+
 // ----------- ----------- MIDDLEWARES SETUP ----------- ----------- //
 
 // CORS & Express setup
@@ -164,6 +185,89 @@ app.get('/search', (req, res) => {
         count: results.length,
         results
     });
+});
+
+// List all downloadable packages
+app.get('/download', (req, res) => {
+    const downloads = {};
+    for (const type of Object.keys(packages)) {
+        downloads[type] = {};
+        for (const project of Object.keys(packages[type])) {
+            if (project === 'list' || project === 'download') continue;
+            const versions = Object.keys(packages[type][project].versions)
+                .filter(v => v !== 'latest');
+            downloads[type][project] = {
+                latest: `/download/${type}/${project}`,
+                versions: versions.reduce((acc, v) => {
+                    acc[v] = `/download/${type}/${project}@${v}`;
+                    return acc;
+                }, {})
+            };
+        }
+    }
+    res.jsonResponse({
+        message: 'Available packages for download (.tar.gz).',
+        downloads
+    });
+});
+
+// List downloadable packages for a specific type
+app.get('/download/:type', (req, res) => {
+    const { type } = req.params;
+
+    if (!packages[type]) {
+        return res.status(404).jsonResponse({
+            message: 'Not Found',
+            error: `Package type '${type}' does not exist.`,
+            status: '404'
+        });
+    }
+
+    const downloads = {};
+    for (const project of Object.keys(packages[type])) {
+        if (project === 'list' || project === 'download') continue;
+        const versions = Object.keys(packages[type][project].versions)
+            .filter(v => v !== 'latest');
+        downloads[project] = {
+            latest: `/download/${type}/${project}`,
+            versions: versions.reduce((acc, v) => {
+                acc[v] = `/download/${type}/${project}@${v}`;
+                return acc;
+            }, {})
+        };
+    }
+    res.jsonResponse({
+        message: `Downloadable ${type} packages (.tar.gz).`,
+        downloads
+    });
+});
+
+// Browser-friendly download route
+app.get('/download/:type/:project', (req, res) => {
+    const { type, project } = req.params;
+    const [name, version] = project.split('@');
+
+    if (!packages[type] || !packages[type][name]) {
+        return res.status(404).jsonResponse({
+            message: 'Not Found',
+            error: `Project '${name}' does not exist in /${type}.`,
+            status: '404'
+        });
+    }
+
+    let resolvedVersion = version || 'latest';
+    if (resolvedVersion === 'latest') {
+        const versionKeys = Object.keys(packages[type][name].versions);
+        resolvedVersion = versionKeys[versionKeys.length - 1];
+    } else if (!packages[type][name].versions[resolvedVersion]) {
+        return res.status(404).jsonResponse({
+            message: 'Not Found',
+            error: `Version ${resolvedVersion} does not exist in the '${name}' project.`,
+            status: '404'
+        });
+    }
+
+    sendArchive(res, type, name, resolvedVersion);
 });
 
 // Check if package type exists
