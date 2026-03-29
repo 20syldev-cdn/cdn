@@ -293,6 +293,7 @@ app.use('/:type/:project/*file', (req, res) => {
         return res.status(304).end();
     }
 
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.sendFile(filePath);
 });
 
