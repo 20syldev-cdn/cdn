@@ -8,6 +8,7 @@
         "start": "node app.js",
         "dev": "nodemon app.js",
         "build": "npm install && node app.js",
+        "fetch": "bash scripts/fetch.sh",
         "upgrade:minor": "npm upgrade",
         "upgrade:major": "npx npm-check-updates -u && npm install",
         "upgrade:build": "npm upgrade && npm install && node app.js"
