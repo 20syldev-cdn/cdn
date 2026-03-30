@@ -15,6 +15,7 @@
         "upgrade:major": "npx npm-check-updates -u && npm install"
     },
     "dependencies": {
+        "@20syldev/logger.ts": "^1.0.1",
         "cors": "latest",
         "express": "latest"
     },
