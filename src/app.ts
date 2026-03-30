@@ -3,6 +3,7 @@ import express from 'express';
 import fs from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
+import { createLogger } from '@20syldev/logger.ts';
 import { getPackages, searchPackages, countPackages } from './lib/packages.js';
 import { getFilesSHA256 } from './lib/checksum.js';
 import { sendArchive } from './lib/archive.js';
@@ -14,6 +15,7 @@ const __dirname = dirname(__filename);
 const ROOT_DIR = join(__dirname, '..');
 
 const app = express();
+const logger = createLogger({ theme: 'colored', order: 'desc' });
 const pkg = JSON.parse(fs.readFileSync(join(ROOT_DIR, 'package.json'), 'utf-8'));
 const startTime = Date.now();
 
@@ -43,6 +45,15 @@ app.use((req: Request, res: Response, next: NextFunction) => {
         res.setHeader('Content-Type', 'application/json');
         res.send(JSON.stringify(data, null, 2));
     };
+    next();
+});
+
+// Log requests
+app.use((req: Request, res: Response, next: NextFunction) => {
+    const start = Date.now();
+    res.on('finish', () => {
+        logger.request(req, res, { url: req.originalUrl, duration: `${Date.now() - start}ms` });
+    });
     next();
 });
 
