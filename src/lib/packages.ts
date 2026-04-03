@@ -5,6 +5,27 @@ import type { Packages, PackageProject, SearchResult } from '../types/index.js';
 const EXCLUDED_DIRS = ['node_modules', 'src', 'scripts', 'lib', 'dist', 'public', '.github'];
 
 /**
+ * Compares two semantic version strings numerically.
+ * Handles varying version segment counts (e.g., "1.0" vs "1.0.0").
+ *
+ * @param a - First version string
+ * @param b - Second version string
+ * @returns Negative if a < b, positive if a > b, zero if equal
+ */
+function compareVersions(a: string, b: string): number {
+    const aParts = a.split('.').map(Number);
+    const bParts = b.split('.').map(Number);
+
+    for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+        const aPart = aParts[i] || 0;
+        const bPart = bParts[i] || 0;
+        if (aPart !== bPart) return aPart - bPart;
+    }
+
+    return 0;
+}
+
+/**
  * Dynamically scans the filesystem to discover all available packages.
  *
  * @param rootDir - Root directory to scan for package types
@@ -40,16 +61,7 @@ export function getPackages(rootDir: string): Packages {
                     .readdirSync(projectPath, { withFileTypes: true })
                     .filter((dirent) => dirent.isDirectory())
                     .map((dirent) => dirent.name)
-                    .sort((a, b) => {
-                        const aParts = a.split('.').map(Number);
-                        const bParts = b.split('.').map(Number);
-                        for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
-                            const aPart = aParts[i] || 0;
-                            const bPart = bParts[i] || 0;
-                            if (aPart !== bPart) return aPart - bPart;
-                        }
-                        return 0;
-                    });
+                    .sort(compareVersions);
 
                 projectEntry.versions['latest'] = `/${type}/${project}@latest`;
                 versions.forEach((version) => {
@@ -107,4 +119,23 @@ export function countPackages(packages: Packages): number {
         }
     }
     return count;
+}
+
+/**
+ * Resolves partial version patterns to the latest matching full version.
+ * Examples: "3" -> "3.5.0", "3.0" -> "3.0.2"
+ *
+ * @param versionPattern - Partial version pattern (e.g., "3", "3.0")
+ * @param projectEntry - The project entry containing all versions
+ * @returns The resolved full version or null if no match found
+ */
+export function resolveVersion(versionPattern: string, projectEntry: PackageProject): string | null {
+    const normalizedPattern = versionPattern.endsWith('.') ? versionPattern : `${versionPattern}.`;
+
+    return (
+        Object.keys(projectEntry.versions)
+            .filter((v) => v !== 'latest' && (v === versionPattern || v.startsWith(normalizedPattern)))
+            .sort(compareVersions)
+            .at(-1) ?? null
+    );
 }
