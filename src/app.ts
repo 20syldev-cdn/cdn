@@ -12,16 +12,16 @@ import type { Request, Response, NextFunction } from 'express';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const ROOT_DIR = join(__dirname, '..');
-const PACKAGES_DIR = join(ROOT_DIR, 'packages');
+const rootDir = join(__dirname, '..');
+const packagesDir = join(rootDir, 'packages');
 
 const app = express();
 const logger = createLogger({ theme: 'colored', order: 'desc' });
-const pkg = JSON.parse(fs.readFileSync(join(ROOT_DIR, 'package.json'), 'utf-8'));
+const pkg = JSON.parse(fs.readFileSync(join(rootDir, 'package.json'), 'utf-8'));
 const startTime = Date.now();
 
 // Dynamic packages object
-const packages = getPackages(PACKAGES_DIR);
+const packages = getPackages(packagesDir);
 
 // Define global variables
 let requests = 0,
@@ -35,10 +35,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 // Set favicon for API
-app.use('/favicon.ico', express.static(join(ROOT_DIR, 'public', 'favicon.ico')));
+app.use('/favicon.ico', express.static(join(rootDir, 'public', 'favicon.ico')));
 
 // Display robots.txt
-app.use('/robots.txt', express.static(join(ROOT_DIR, 'robots.txt')));
+app.use('/robots.txt', express.static(join(rootDir, 'robots.txt')));
 
 // Return formatted JSON
 app.use((req: Request, res: Response, next: NextFunction) => {
@@ -176,12 +176,12 @@ app.get('/download/:type/:project', (req: Request, res: Response) => {
     let resolved = version || 'latest';
 
     if (resolved === 'latest') {
-        const versionKeys = Object.keys(entry.versions);
-        resolved = versionKeys[versionKeys.length - 1];
+        const versions = Object.keys(entry.versions);
+        resolved = versions[versions.length - 1];
     } else if (!entry.versions[resolved]) {
-        const partialMatch = resolveVersion(resolved, entry);
-        if (partialMatch) {
-            resolved = partialMatch;
+        const match = resolveVersion(resolved, entry);
+        if (match) {
+            resolved = match;
         } else {
             return res.status(404).jsonResponse({
                 message: 'Not Found',
@@ -191,7 +191,7 @@ app.get('/download/:type/:project', (req: Request, res: Response) => {
         }
     }
 
-    sendArchive(res, type, name, resolved, PACKAGES_DIR);
+    sendArchive(res, type, name, resolved, packagesDir);
 });
 
 // Check if package type exists
@@ -225,8 +225,8 @@ app.get('/:type/:project/changelog', (req: Request, res: Response) => {
     const versions = Object.keys(entry.versions).filter((v) => v !== 'latest');
 
     const changelog = versions.map((version) => {
-        const versionPath = join(PACKAGES_DIR, type, project, version);
-        const stat = fs.statSync(versionPath);
+        const path = join(packagesDir, type, project, version);
+        const stat = fs.statSync(path);
         return {
             version,
             date: stat.mtime.toISOString().split('T')[0],
@@ -270,16 +270,16 @@ app.use('/:type/:project', (req: Request, res: Response, next: NextFunction) => 
 
     if (version === 'latest') {
         const entry = packages[type][name] as PackageProject;
-        const versionKeys = Object.keys(entry.versions);
-        req.version = versionKeys[versionKeys.length - 1];
+        const versions = Object.keys(entry.versions);
+        req.version = versions[versions.length - 1];
     } else {
         const entry = packages[type][name] as PackageProject;
         let resolved = version;
 
         if (!entry.versions[version]) {
-            const partialMatch = resolveVersion(version, entry);
-            if (partialMatch) {
-                resolved = partialMatch;
+            const match = resolveVersion(version, entry);
+            if (match) {
+                resolved = match;
             } else {
                 return res.status(404).jsonResponse({
                     message: 'Not Found',
@@ -297,9 +297,9 @@ app.use('/:type/:project', (req: Request, res: Response, next: NextFunction) => 
 app.use('/:type/:project/*file', (req: Request, res: Response) => {
     const type = req.params.type as string;
     const file = ([] as string[]).concat(req.params.file as string).join('/');
-    const filePath = join(PACKAGES_DIR, type, req.name, req.version, file);
+    const location = join(packagesDir, type, req.name, req.version, file);
 
-    if (!fs.existsSync(filePath)) {
+    if (!fs.existsSync(location)) {
         return res.status(404).jsonResponse({
             message: 'Not Found',
             error: `File '${file}' does not exist in the ${req.version} version of the '${req.name}' project.`,
@@ -307,10 +307,10 @@ app.use('/:type/:project/*file', (req: Request, res: Response) => {
         });
     }
 
-    if (fs.statSync(filePath).isDirectory()) {
-        const entries = fs.readdirSync(filePath, { withFileTypes: true });
+    if (fs.statSync(location).isDirectory()) {
+        const entries = fs.readdirSync(location, { withFileTypes: true });
         const files = entries.map((ent) => {
-            const fullPath = join(filePath, ent.name);
+            const fullPath = join(location, ent.name);
             const stat = fs.statSync(fullPath);
             return {
                 name: ent.isDirectory() ? ent.name + '/' : ent.name,
@@ -326,7 +326,7 @@ app.use('/:type/:project/*file', (req: Request, res: Response) => {
         });
     }
 
-    const stat = fs.statSync(filePath);
+    const stat = fs.statSync(location);
     const etag = `"${stat.size.toString(16)}-${stat.mtimeMs.toString(16)}"`;
     res.setHeader('ETag', etag);
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
@@ -336,7 +336,7 @@ app.use('/:type/:project/*file', (req: Request, res: Response) => {
     }
 
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    res.sendFile(filePath);
+    res.sendFile(location);
 });
 
 // ----------- ----------- MAIN ENDPOINTS ----------- ----------- //
@@ -367,11 +367,11 @@ app.get('/:type/:project', (req: Request, res: Response) => {
     const type = req.params.type as string;
     const name = req.name;
     const version = req.version;
-    const projectPath = join(PACKAGES_DIR, type, name, version);
+    const path = join(packagesDir, type, name, version);
 
     // SHA256 checksums for all files
     if (req.query.checksums !== undefined) {
-        const checksums = getFilesSHA256(projectPath);
+        const checksums = getFilesSHA256(path);
         return res.jsonResponse({
             name,
             version,
@@ -382,10 +382,10 @@ app.get('/:type/:project', (req: Request, res: Response) => {
 
     // Download as .tar.gz archive
     if (req.query.download !== undefined) {
-        return sendArchive(res, type, name, version, PACKAGES_DIR);
+        return sendArchive(res, type, name, version, packagesDir);
     }
 
-    fs.readdir(projectPath, { withFileTypes: true }, (err, entries) => {
+    fs.readdir(path, { withFileTypes: true }, (err, entries) => {
         if (err) {
             return res.status(500).jsonResponse({
                 message: 'Internal Server Error',
@@ -394,7 +394,7 @@ app.get('/:type/:project', (req: Request, res: Response) => {
             });
         }
         const files = entries.map((ent) => {
-            const fullPath = join(projectPath, ent.name);
+            const fullPath = join(path, ent.name);
             const stat = fs.statSync(fullPath);
             return {
                 name: ent.isDirectory() ? ent.name + '/' : ent.name,
