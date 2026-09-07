@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { createLogger } from '@20syldev/logger.ts';
 import { getPackages, searchPackages, countPackages, resolveVersion } from './lib/packages.js';
 import { getFilesSHA256 } from './lib/checksum.js';
+import { getSizes } from './lib/sizes.js';
 import { sendArchive } from './lib/archive.js';
 import type { PackageProject } from './types/index.js';
 import type { Request, Response, NextFunction } from 'express';
@@ -22,6 +23,9 @@ const startTime = Date.now();
 
 // Dynamic packages object
 const packages = getPackages(packagesDir);
+
+// Cumulative directory sizes, indexed once since published versions are immutable
+const sizes = getSizes(packagesDir);
 
 // Define global variables
 let requests = 0,
@@ -311,10 +315,9 @@ app.use('/:type/:project/*file', (req: Request, res: Response) => {
         const entries = fs.readdirSync(location, { withFileTypes: true });
         const files = entries.map((ent) => {
             const fullPath = join(location, ent.name);
-            const stat = fs.statSync(fullPath);
             return {
                 name: ent.isDirectory() ? ent.name + '/' : ent.name,
-                size: ent.isDirectory() ? null : stat.size,
+                size: ent.isDirectory() ? (sizes.get(fullPath) ?? null) : fs.statSync(fullPath).size,
                 directory: ent.isDirectory(),
             };
         });
@@ -395,10 +398,9 @@ app.get('/:type/:project', (req: Request, res: Response) => {
         }
         const files = entries.map((ent) => {
             const fullPath = join(path, ent.name);
-            const stat = fs.statSync(fullPath);
             return {
                 name: ent.isDirectory() ? ent.name + '/' : ent.name,
-                size: ent.isDirectory() ? null : stat.size,
+                size: ent.isDirectory() ? (sizes.get(fullPath) ?? null) : fs.statSync(fullPath).size,
                 directory: ent.isDirectory(),
             };
         });
