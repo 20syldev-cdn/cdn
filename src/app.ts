@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { createLogger } from '@20syldev/logger.ts';
 import { getPackages, searchPackages, countPackages, resolveVersion } from './lib/packages.js';
 import { getFilesSHA256 } from './lib/checksum.js';
+import { safeJoin } from './lib/paths.js';
 import { getSizes } from './lib/sizes.js';
 import { sendArchive } from './lib/archive.js';
 import type { PackageProject } from './types/index.js';
@@ -301,9 +302,9 @@ app.use('/:type/:project', (req: Request, res: Response, next: NextFunction) => 
 app.use('/:type/:project/*file', (req: Request, res: Response) => {
     const type = req.params.type as string;
     const file = ([] as string[]).concat(req.params.file as string).join('/');
-    const location = join(packagesDir, type, req.name, req.version, file);
+    const location = safeJoin(packagesDir, type, req.name, req.version, file);
 
-    if (!fs.existsSync(location)) {
+    if (!location || !fs.existsSync(location)) {
         return res.status(404).jsonResponse({
             message: 'Not Found',
             error: `File '${file}' does not exist in the ${req.version} version of the '${req.name}' project.`,
